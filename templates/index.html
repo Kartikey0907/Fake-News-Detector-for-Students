@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kartikey - Fake News Detector for Students</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon-wrapper">
+                    <span class="logo-icon">&#128200;</span>
+                </div>
+                <h1>Kartikey</h1>
+            </div>
+            <p class="tagline">Your AI-Powered Fake News Detector &bull; Analyze text, URLs, or images</p>
+        </header>
+
+        <main>
+            <div class="card api-card">
+                <div class="card-header">
+                    <span class="card-icon">&#128273;</span>
+                    <h2>Gemini API Key</h2>
+                </div>
+                <div class="card-body">
+                    <div class="input-group">
+                        <div class="input-wrapper">
+                            <input type="password" id="api_key" placeholder="Enter your Gemini API key"
+                                autocomplete="off">
+                            <button type="button" id="toggle_key" class="toggle-btn"
+                                title="Show/Hide API Key">&#128065;</button>
+                        </div>
+                        <p class="help-text">Your API key is used only for this session and is never stored.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card input-card">
+                <div class="card-header">
+                    <span class="card-icon">&#128196;</span>
+                    <div class="tab-bar">
+                        <button class="tab-btn active" data-tab="text_tab">
+                            <span>&#128221;</span> Paste Text
+                        </button>
+                        <button class="tab-btn" data-tab="url_tab">
+                            <span>&#127760;</span> URL
+                        </button>
+                        <button class="tab-btn" data-tab="image_tab">
+                            <span>&#128247;</span> Image
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content active" id="text_tab">
+                        <div class="input-group">
+                            <textarea id="article" rows="8"
+                                placeholder="Paste the full article text here (at least 50 characters)..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="url_tab">
+                        <div class="input-group">
+                            <label for="url_input">Enter article URL</label>
+                            <input type="url" id="url_input" placeholder="https://example.com/news-article..."
+                                autocomplete="url">
+                        </div>
+                        <p class="help-text" style="margin-top:4px;">Kartikey will fetch and analyze the article from
+                            this URL.</p>
+                    </div>
+
+                    <div class="tab-content" id="image_tab">
+                        <div class="input-group">
+                            <label for="image_input">Upload a news screenshot or image</label>
+                            <div class="upload-area" id="upload_area">
+                                <div class="upload-placeholder" id="upload_placeholder">
+                                    <span class="upload-icon">&#128247;</span>
+                                    <p>Drag & drop an image here or <strong>browse</strong></p>
+                                    <p class="upload-hint">Supports JPEG, PNG, GIF, WebP (max 10MB)</p>
+                                </div>
+                                <div class="upload-preview" id="upload_preview" style="display:none;">
+                                    <img id="preview_image" alt="Uploaded preview">
+                                    <button type="button" id="remove_image_btn" class="remove-btn">&times;</button>
+                                </div>
+                                <input type="file" id="image_input" accept="image/jpeg,image/png,image/gif,image/webp"
+                                    style="display:none;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="analyze_btn" class="btn-primary">
+                        <span class="btn-text">Analyze with Kartikey</span>
+                        <span class="btn-loader" style="display:none;">&#9696; Kartikey is analyzing...</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="result_section" class="card result-card" style="display:none;">
+                <div class="card-header">
+                    <span class="card-icon">&#128200;</span>
+                    <h2>Analysis Results</h2>
+                    <button id="export_btn" class="btn-export" title="Export Results as Text">&#128230; Export</button>
+                </div>
+                <div class="card-body">
+                    <div class="result-summary">
+                        <div class="verdict-badge" id="verdict_badge">
+                            <span class="verdict-text" id="verdict_text"></span>
+                        </div>
+                        <div class="score-container">
+                            <div class="score-ring">
+                                <svg viewBox="0 0 120 120" class="score-svg">
+                                    <circle cx="60" cy="60" r="52" class="score-bg" />
+                                    <circle cx="60" cy="60" r="52" class="score-fill" id="score_fill" />
+                                </svg>
+                                <div class="score-value" id="score_value">0</div>
+                            </div>
+                            <p class="score-label">Credibility Score</p>
+                        </div>
+                    </div>
+
+                    <div class="explanation-box">
+                        <h3>&#128220; Explanation from Kartikey</h3>
+                        <p id="explanation_text"></p>
+                    </div>
+
+                    <div class="feature-card clickbait-card" id="clickbait_card">
+                        <div class="feature-icon" id="clickbait_icon">&#128680;</div>
+                        <div class="feature-content">
+                            <h3>Clickbait & Sensationalism Check</h3>
+                            <div class="clickbait-status" id="clickbait_status"></div>
+                            <p id="clickbait_explanation"></p>
+                        </div>
+                    </div>
+
+                    <div class="feature-card tone-card">
+                        <div class="feature-icon" id="tone_icon">&#127908;</div>
+                        <div class="feature-content">
+                            <h3>Emotional Tone of Article</h3>
+                            <div class="tone-badge" id="tone_badge">
+                                <span id="tone_text">Neutral</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="details-grid">
+                        <div class="detail-card red-flags">
+                            <h3>&#10060; Red Flags</h3>
+                            <ul id="red_flags_list"></ul>
+                        </div>
+                        <div class="detail-card green-flags">
+                            <h3>&#9989; Trustworthy Elements</h3>
+                            <ul id="trustworthy_list"></ul>
+                        </div>
+                    </div>
+
+                    <div class="tips-card">
+                        <h3>&#128161; How to Verify This Article</h3>
+                        <ul id="tips_list"></ul>
+                    </div>
+
+                    <div class="summary-box">
+                        <h3>&#128214; Article Summary from Kartikey</h3>
+                        <p id="summary_text"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="error_section" class="card error-card" style="display:none;">
+                <div class="card-header">
+                    <span class="card-icon">&#9888;</span>
+                    <h2>Error</h2>
+                </div>
+                <div class="card-body">
+                    <p id="error_text"></p>
+                </div>
+            </div>
+
+            <div id="history_section" class="card history-card" style="display:none;">
+                <div class="card-header">
+                    <span class="card-icon">&#128195;</span>
+                    <h2>Analysis History</h2>
+                    <button id="clear_history_btn" class="btn-small">Clear All</button>
+                </div>
+                <div class="card-body">
+                    <div id="history_list"></div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Built with &#128153; for students &bull; Powered by Google Gemini AI</p>
+            <p class="disclaimer">Always cross-check information with multiple reliable sources before drawing
+                conclusions.</p>
+        </footer>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+
+</html>
