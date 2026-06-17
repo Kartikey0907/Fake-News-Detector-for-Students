@@ -19,37 +19,16 @@
                 </div>
                 <h1>Kartikey</h1>
             </div>
-            <p class="tagline">Your AI-Powered Fake News Detector &bull; Analyze text, URLs, or images</p>
+            <p class="tagline">Your AI-Powered Fake News Detector &bull; Analyze text or images</p>
         </header>
 
         <main>
-            <div class="card api-card">
-                <div class="card-header">
-                    <span class="card-icon">&#128273;</span>
-                    <h2>Gemini API Key</h2>
-                </div>
-                <div class="card-body">
-                    <div class="input-group">
-                        <div class="input-wrapper">
-                            <input type="password" id="api_key" placeholder="Enter your Gemini API key"
-                                autocomplete="off">
-                            <button type="button" id="toggle_key" class="toggle-btn"
-                                title="Show/Hide API Key">&#128065;</button>
-                        </div>
-                        <p class="help-text">Your API key is used only for this session and is never stored.</p>
-                    </div>
-                </div>
-            </div>
-
             <div class="card input-card">
                 <div class="card-header">
                     <span class="card-icon">&#128196;</span>
                     <div class="tab-bar">
                         <button class="tab-btn active" data-tab="text_tab">
                             <span>&#128221;</span> Paste Text
-                        </button>
-                        <button class="tab-btn" data-tab="url_tab">
-                            <span>&#127760;</span> URL
                         </button>
                         <button class="tab-btn" data-tab="image_tab">
                             <span>&#128247;</span> Image
@@ -62,16 +41,6 @@
                             <textarea id="article" rows="8"
                                 placeholder="Paste the full article text here (at least 50 characters)..."></textarea>
                         </div>
-                    </div>
-
-                    <div class="tab-content" id="url_tab">
-                        <div class="input-group">
-                            <label for="url_input">Enter article URL</label>
-                            <input type="url" id="url_input" placeholder="https://example.com/news-article..."
-                                autocomplete="url">
-                        </div>
-                        <p class="help-text" style="margin-top:4px;">Kartikey will fetch and analyze the article from
-                            this URL.</p>
                     </div>
 
                     <div class="tab-content" id="image_tab">
@@ -193,7 +162,7 @@
         </main>
 
         <footer>
-            <p>Built with &#128153; for students &bull; Powered by Google Gemini AI</p>
+            <p>Built with &#128153; for students &bull; Powered by OpenAI</p>
             <p class="disclaimer">Always cross-check information with multiple reliable sources before drawing
                 conclusions.</p>
         </footer>

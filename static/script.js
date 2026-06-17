@@ -1,8 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const apiKeyInput = document.getElementById('api_key');
-    const toggleBtn = document.getElementById('toggle_key');
     const articleText = document.getElementById('article');
-    const urlInput = document.getElementById('url_input');
     const imageInput = document.getElementById('image_input');
     const analyzeBtn = document.getElementById('analyze_btn');
     const resultSection = document.getElementById('result_section');
@@ -32,24 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    toggleBtn.addEventListener('click', () => {
-        if (apiKeyInput.type === 'password') {
-            apiKeyInput.type = 'text';
-            toggleBtn.textContent = '🙈';
-        } else {
-            apiKeyInput.type = 'password';
-            toggleBtn.textContent = '👁';
-        }
-    });
-
     analyzeBtn.addEventListener('click', analyzeArticle);
-
-    urlInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            analyzeArticle();
-        }
-    });
 
     articleText.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -129,27 +109,17 @@ document.addEventListener('DOMContentLoaded', () => {
     renderHistory();
 
     function analyzeArticle() {
-        const apiKey = apiKeyInput.value.trim();
-
         resultSection.style.display = 'none';
         errorSection.style.display = 'none';
 
-        if (!apiKey) {
-            showError('Please enter your Gemini API key.');
-            apiKeyInput.focus();
-            return;
-        }
-
         if (currentTab === 'text_tab') {
-            analyzeText(apiKey);
-        } else if (currentTab === 'url_tab') {
-            analyzeUrl(apiKey);
+            analyzeText();
         } else if (currentTab === 'image_tab') {
-            analyzeImage(apiKey);
+            analyzeImage();
         }
     }
 
-    function analyzeText(apiKey) {
+    function analyzeText() {
         const article = articleText.value.trim();
 
         if (!article) {
@@ -167,63 +137,32 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ article: article, api_key: apiKey })
+            body: JSON.stringify({ article: article })
         })
-            .then(r => r.json())
-            .then(data => handleResponse(data, article))
-            .catch(() => showError('Network error. Please check your connection and try again.'))
-            .finally(() => setLoading(false));
-    }
-
-    function analyzeUrl(apiKey) {
-        let url = urlInput.value.trim();
-
-        if (!url) {
-            showError('Please enter a URL to analyze.');
-            urlInput.focus();
-            return;
-        }
-
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            url = 'https://' + url;
-        }
-
-        try {
-            new URL(url);
-        } catch {
-            showError('Please enter a valid URL (e.g., https://example.com/article).');
-            urlInput.focus();
-            return;
-        }
-
-        setLoading(true, 'Fetching article from URL...');
-        fetch('/analyze-url', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: url, api_key: apiKey })
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.error) {
-                    showError(data.error);
-                } else {
-                    data.article_preview = data.article_preview || url.substring(0, 80);
-                    displayResults(data);
-                    addToHistory(data);
+            .then(r => {
+                if (!r.ok) {
+                    return r.json().then(err => { throw new Error(err.error || err.fetch_error || `Server error (${r.status})`); });
                 }
+                return r.json();
             })
-            .catch(() => showError('Network error. Please check your connection and try again.'))
+            .then(data => {
+                data.article_preview = article.substring(0, 80) + (article.length > 80 ? '...' : '');
+                displayResults(data);
+                addToHistory(data);
+            })
+            .catch(err => {
+                showError(err.message || 'An unexpected error occurred.');
+            })
             .finally(() => setLoading(false));
     }
 
-    function analyzeImage(apiKey) {
+    function analyzeImage() {
         if (!uploadedImageFile) {
             showError('Please upload an image to analyze.');
             return;
         }
 
         const formData = new FormData();
-        formData.append('api_key', apiKey);
         formData.append('image', uploadedImageFile);
 
         setLoading(true, 'Analyzing image...');
@@ -231,28 +170,21 @@ document.addEventListener('DOMContentLoaded', () => {
             method: 'POST',
             body: formData
         })
-            .then(r => r.json())
-            .then(data => {
-                if (data.error) {
-                    showError(data.error);
-                } else {
-                    data.article_preview = `Image: ${uploadedImageFile.name}`;
-                    displayResults(data);
-                    addToHistory(data);
+            .then(r => {
+                if (!r.ok) {
+                    return r.json().then(err => { throw new Error(err.error || `Server error (${r.status})`); });
                 }
+                return r.json();
             })
-            .catch(() => showError('Network error. Please check your connection and try again.'))
+            .then(data => {
+                data.article_preview = `Image: ${uploadedImageFile.name}`;
+                displayResults(data);
+                addToHistory(data);
+            })
+            .catch(err => {
+                showError(err.message || 'An unexpected error occurred.');
+            })
             .finally(() => setLoading(false));
-    }
-
-    function handleResponse(data, articleText) {
-        if (data.error) {
-            showError(data.error);
-        } else {
-            data.article_preview = articleText.substring(0, 80) + (articleText.length > 80 ? '...' : '');
-            displayResults(data);
-            addToHistory(data);
-        }
     }
 
     function setLoading(isLoading, message) {
@@ -510,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
             '',
             '───────────────────────────────────────',
             'Generated by Kartikey Fake News Detector',
-            'Powered by Google Gemini AI'
+            'Powered by OpenAI'
         ];
 
         const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
