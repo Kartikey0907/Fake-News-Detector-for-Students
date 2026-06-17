@@ -6,72 +6,56 @@ import base64
 import time
 import random
 from flask import Flask, render_template, request, jsonify
-from dotenv import load_dotenv
 from PIL import Image
-from openai import OpenAI
-
-load_dotenv()
+import google.generativeai as genai
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-# --- OpenAI Configuration ---
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL = "gpt-4o-mini"  # Good balance of speed/cost. Supports json response format.
+# --- Gemini Configuration ---
+# ENTER YOUR GEMINI API KEY HERE
+GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"
+GEMINI_MODEL = "gemini-1.5-flash" 
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
 
 # --- Rate Limit Retry Configuration ---
 MAX_RETRIES = 8
 INITIAL_BACKOFF = 5  # seconds (higher for free tier)
 MAX_BACKOFF = 120     # seconds
 
-def call_openai_with_retry(messages, max_retries=MAX_RETRIES, model=OPENAI_MODEL):
-    """Call OpenAI API with exponential backoff retry logic for rate limit errors."""
-    if not OPENAI_API_KEY or OPENAI_API_KEY == "sk-your-openai-api-key-here":
-        raise ValueError("OpenAI API key is not configured. Please add it to the .env file.")
+def call_gemini_with_retry(prompt, image=None, system_instruction=None):
+    """Call Gemini API with retry logic."""
+    if not GEMINI_API_KEY or GEMINI_API_KEY == "YOUR_GEMINI_API_KEY_HERE":
+        raise ValueError("Gemini API key is not configured. Please add it to app.py.")
     
-    # Only use response_format for models that support it
-    kwargs = {"model": model, "messages": messages}
-    if model in ("gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-4-1106-preview", "gpt-3.5-turbo-1106"):
-        kwargs["response_format"] = {"type": "json_object"}
+    model = genai.GenerativeModel(
+        model_name=GEMINI_MODEL,
+        system_instruction=system_instruction
+    )
     
     last_error = None
-    for attempt in range(max_retries):
+    for attempt in range(MAX_RETRIES):
         try:
-            response = client.chat.completions.create(**kwargs)
-            return response.choices[0].message.content
+            content = [prompt, image] if image else prompt
+            response = model.generate_content(
+                content,
+                generation_config={"response_mime_type": "application/json"}
+            )
+            return response.text
         except Exception as e:
             error_msg = str(e)
             last_error = e
             
             # Handle various error types
             if "429" in error_msg or "rate limit" in error_msg.lower() or "too many requests" in error_msg.lower():
-                if attempt < max_retries - 1:
-                    backoff = min(INITIAL_BACKOFF * (2 ** attempt), MAX_BACKOFF)
-                    jitter = backoff * 0.2 * (2 * random.random() - 1)
-                    sleep_time = backoff + jitter
-                    print(f"Rate limited. Retrying in {sleep_time:.1f} seconds... (attempt {attempt + 1}/{max_retries})")
-                    time.sleep(sleep_time)
-                else:
-                    raise
+                backoff = min(INITIAL_BACKOFF * (2 ** attempt), MAX_BACKOFF)
+                time.sleep(backoff + random.uniform(0, 1))
             else:
                 raise
     
     raise last_error
-
-
-def encode_image_to_base64(image_path_or_bytes):
-    """Convert an image to base64 for OpenAI vision API."""
-    if isinstance(image_path_or_bytes, bytes):
-        return base64.b64encode(image_path_or_bytes).decode('utf-8')
-    elif isinstance(image_path_or_bytes, str):
-        with open(image_path_or_bytes, "rb") as f:
-            return base64.b64encode(f.read()).decode('utf-8')
-    else:
-        buffer = io.BytesIO()
-        image_path_or_bytes.save(buffer, format="PNG")
-        return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
 
 def clean_text(text):
@@ -80,8 +64,8 @@ def clean_text(text):
     return text
 
 
-def analyze_text_with_openai(article_text):
-    """Send article text to OpenAI and get credibility analysis."""
+def analyze_text_with_gemini(article_text):
+    """Send article text to Gemini and get credibility analysis."""
     system_prompt = """You are Kartikey, a friendly fact-checking AI assistant for students. Your job is to evaluate article credibility based on the content provided.
 
 IMPORTANT RULES:
@@ -110,18 +94,12 @@ Respond ONLY with a valid JSON object (no markdown, no code blocks)."""
 Article to analyze:
 {article_text}"""
 
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt}
-    ]
-    
-    result_text = call_openai_with_retry(messages)
+    result_text = call_gemini_with_retry(user_prompt, system_instruction=system_prompt)
     return result_text
 
 
-def analyze_image_with_openai(image_data):
-    """Analyze a news screenshot image using OpenAI vision."""
-    base64_image = encode_image_to_base64(image_data)
+def analyze_image_with_gemini(image_data):
+    """Analyze a news screenshot image using Gemini vision."""
     
     system_prompt = """You are Kartikey, a friendly fact-checking AI assistant for students. 
 Analyze the image (a news screenshot, social media post, or headline) for credibility.
@@ -148,29 +126,12 @@ Respond ONLY with a valid JSON object (no markdown, no code blocks)."""
     "summary": "<a concise 2-3 sentence summary of what the image shows>"
 }"""
 
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {
-            "role": "user",
-            "content": [
-                {"type": "text", "text": user_prompt},
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/png;base64,{base64_image}",
-                        "detail": "low"
-                    }
-                }
-            ]
-        }
-    ]
-    
-    result_text = call_openai_with_retry(messages)
+    result_text = call_gemini_with_retry(user_prompt, image=image_data, system_instruction=system_prompt)
     return result_text
 
 
-def parse_openai_response(raw):
-    """Parse OpenAI response to extract JSON."""
+def parse_ai_response(raw):
+    """Parse AI response to extract JSON."""
     raw = raw.strip()
     raw = re.sub(r'^```json\s*', '', raw)
     raw = re.sub(r'^```\s*', '', raw)
@@ -273,19 +234,20 @@ def analyze():
     
     try:
         article_text = clean_text(article_text)
-        result_text = analyze_text_with_openai(article_text)
-        result = parse_openai_response(result_text)
+        result_text = analyze_text_with_gemini(article_text)
+        result = parse_ai_response(result_text)
         return jsonify(result)
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
+        print(f"CRITICAL API ERROR: {str(e)}") # This will show the real reason in your terminal
         error_msg = str(e)
         if "401" in error_msg or "unauthorized" in error_msg.lower() or "invalid" in error_msg.lower():
-            return jsonify({'error': 'Invalid OpenAI API key. Please update it in the .env file.'}), 400
+            return jsonify({'error': 'Invalid Gemini API key. Please update it in app.py.'}), 400
         if "429" in error_msg or "rate limit" in error_msg.lower() or "too many requests" in error_msg.lower():
-            return jsonify({'error': 'OpenAI API rate limit exceeded. Please wait a minute and try again.'}), 429
+            return jsonify({'error': 'Gemini API rate limit exceeded. Please wait a minute and try again.'}), 429
         if "insufficient_quota" in error_msg.lower():
-            return jsonify({'error': 'OpenAI API quota exceeded. Please check your billing plan.'}), 400
+            return jsonify({'error': 'Gemini API quota exceeded. Please check your billing plan.'}), 400
         if "safety" in error_msg.lower() or "content_filter" in error_msg.lower() or "blocked" in error_msg.lower():
             return jsonify({'error': 'Content was blocked by safety filters. Please try different content.'}), 400
         return jsonify({'error': f'Analysis failed: {error_msg[:200]}'}), 500
@@ -311,19 +273,14 @@ def analyze_image():
             return jsonify({'error': 'Image is too large. Please upload an image under 10MB.'}), 400
         
         img = Image.open(io.BytesIO(image_bytes))
-        # Need to use gpt-4o-mini for vision/image analysis
-        global OPENAI_MODEL
-        original_model = OPENAI_MODEL
-        OPENAI_MODEL = "gpt-4o-mini"  # Vision requires gpt-4 models
-        result_text = analyze_image_with_openai(img)
-        OPENAI_MODEL = original_model
-        result = parse_openai_response(result_text)
+        result_text = analyze_image_with_gemini(img)
+        result = parse_ai_response(result_text)
         
         return jsonify(result)
     except Exception as e:
         error_msg = str(e)
         if "429" in error_msg or "rate limit" in error_msg.lower() or "too many requests" in error_msg.lower():
-            return jsonify({'error': 'OpenAI API rate limit exceeded. Please wait a minute and try again.'}), 429
+            return jsonify({'error': 'Gemini API rate limit exceeded. Please wait a minute and try again.'}), 429
         return jsonify({'error': f'Image analysis failed: {error_msg[:200]}'}), 500
 
 

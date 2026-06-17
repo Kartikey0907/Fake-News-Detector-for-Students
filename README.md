@@ -1,6 +1,6 @@
 # Kartikey - Fake News Detector for Students
 
-An AI-powered web application that helps students detect fake news by analyzing article text, URLs, or images using OpenAI.
+An AI-powered web application that helps students detect fake news by analyzing article text, URLs, or images using Google Gemini.
 
 ## Features
 
@@ -25,7 +25,7 @@ An AI-powered web application that helps students detect fake news by analyzing 
 |-----------|-----------|
 | Backend | Python / Flask |
 | Frontend | HTML, CSS, JavaScript |
-| AI API | OpenAI (GPT-4o-mini) |
+| AI API | Google Gemini (gemini-1.5-flash) |
 | Web Scraping | BeautifulSoup4 / Requests |
 | Image Processing | Pillow (PIL) |
 
@@ -35,7 +35,6 @@ An AI-powered web application that helps students detect fake news by analyzing 
 Fake-News-Detector-for-Students/
 ├── app.py                 # Flask application with API routes
 ├── requirements.txt       # Python dependencies
-├── .env                   # OpenAI API key configuration
 ├── static/
 │   ├── script.js          # Frontend JavaScript logic
 │   └── style.css          # Application styles
@@ -47,7 +46,7 @@ Fake-News-Detector-for-Students/
 ## Prerequisites
 
 - Python 3.8+
-- An OpenAI API key (get one at [OpenAI Platform](https://platform.openai.com/api-keys))
+- A Gemini API key (get one at [Google AI Studio](https://aistudio.google.com/app/apikey))
 
 ## Installation
 
@@ -59,17 +58,16 @@ Fake-News-Detector-for-Students/
 
 2. **Install Python dependencies**
    ```bash
-   pip install -r requirements.txt
+   pip install --upgrade flask google-generativeai pillow beautifulsoup4 requests
    ```
 
-3. **Set your OpenAI API key**
+3. **Set your Gemini API key**
    
-   Edit the `.env` file in the project root and replace the placeholder:
+   Open `app.py` and replace the placeholder with your key:
    ```
-   OPENAI_API_KEY=sk-your-openai-api-key-here
+   GEMINI_API_KEY = "your-gemini-api-key-here"
    ```
-   
-   Get your key at: https://platform.openai.com/api-keys
+   Get your key at: https://aistudio.google.com/app/apikey
 
 ## Usage
 
@@ -146,14 +144,13 @@ Edit the `.env` file to configure:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `OPENAI_API_KEY` | Your OpenAI API key (required) | — |
-| `OPENAI_MODEL` | OpenAI model to use | `gpt-4o-mini` |
+| `GEMINI_API_KEY` | Your Gemini API key (required) | — |
+| `GEMINI_MODEL` | Gemini model to use | `gemini-1.5-flash` |
 
-You can also change the model directly in `app.py` by editing the `OPENAI_MODEL` variable.
+Configure these directly in `app.py`.
 
 ## Limitations
-
-- An OpenAI API key is required (set in `.env` file)
+- A Gemini API key is required (set in `app.py`)
 - Some websites may block scraping or require JavaScript rendering
 - AI-based analysis is not 100% accurate; always cross-check with multiple sources
 - Minimum 50 characters required for text analysis
@@ -165,4 +162,4 @@ This tool is for educational purposes. Always cross-check information with multi
 
 ---
 
-Built with ❤️ for students | Powered by OpenAI
+Built with ❤️ for students | Powered by Google Gemini
